@@ -1,20 +1,17 @@
 /**
- * CONFIGURATION DES BLOCS WINCC OA
+ * CONFIGURATION DES BLOCS WINCC OA (V1.2)
  */
-
 Blockly.defineBlocksWithJsonArray([
-    // Bloc Déclaration de Variable
+    // --- VARIABLES ---
     {
         "type": "wincc_variable",
         "message0": "Déclarer %1 %2 = %3",
         "args0": [
             {
-                "type": "field_dropdown",
-                "name": "TYPE",
+                "type": "field_dropdown", "name": "TYPE",
                 "options": [
                     ["bool", "bool"], ["int", "int"], ["float", "float"], 
-                    ["string", "string"], ["time", "time"], ["dyn_int", "dyn_int"], 
-                    ["dyn_string", "dyn_string"], ["anytype", "anytype"]
+                    ["string", "string"], ["time", "time"], ["anytype", "anytype"]
                 ]
             },
             { "type": "field_input", "name": "VAR_NAME", "text": "maVariable" },
@@ -22,32 +19,46 @@ Blockly.defineBlocksWithJsonArray([
         ],
         "previousStatement": null, "nextStatement": null, "colour": 160
     },
-    // Bloc dpGet
+
+    // --- ACCÈS DONNÉES ---
     {
         "type": "wincc_dpget",
-        "message0": "Lire DP %1 dans %2",
+        "message0": "Lire DP %1 → %2",
         "args0": [
             { "type": "field_input", "name": "DP_NAME", "text": "System1:Motor.status" },
             { "type": "field_input", "name": "VAR_NAME", "text": "maVariable" }
         ],
         "previousStatement": null, "nextStatement": null, "colour": 230
     },
-    // Bloc dpSet
     {
         "type": "wincc_dpset",
-        "message0": "Écrire %1 dans DP %2",
+        "message0": "Écrire %1 → DP %2",
         "args0": [
             { "type": "field_input", "name": "VALUE", "text": "1" },
             { "type": "field_input", "name": "DP_NAME", "text": "System1:Cmd.start" }
         ],
         "previousStatement": null, "nextStatement": null, "colour": 0
     },
-    // Bloc If Custom
+
+    // --- LOGIQUE & TEMPS ---
+    {
+        "type": "wincc_delay",
+        "message0": "Attendre %1 secondes",
+        "args0": [{ "type": "field_number", "name": "SEC", "value": 1 }],
+        "previousStatement": null, "nextStatement": null, "colour": 260
+    },
+    {
+        "type": "wincc_debug",
+        "message0": "Afficher dans log: %1",
+        "args0": [{ "type": "field_input", "name": "TEXT", "text": "Action effectuée" }],
+        "previousStatement": null, "nextStatement": null, "colour": 120
+    },
     {
         "type": "logic_if_custom",
-        "message0": "Si %1 == %2 alors",
+        "message0": "Si %1 %2 %3 alors",
         "args0": [
             { "type": "field_input", "name": "VAR", "text": "maVariable" },
+            { "type": "field_dropdown", "name": "OP", "options": [["==", "=="], ["!=", "!="], [">", ">"], ["<", "<"]] },
             { "type": "field_input", "name": "VAL_COMP", "text": "1" }
         ],
         "message1": "%1",
@@ -59,62 +70,56 @@ Blockly.defineBlocksWithJsonArray([
 /**
  * GÉNÉRATEUR DE CODE CTRL
  */
-
 const ctrlGenerator = new Blockly.Generator('CTRL');
 
-// Gère l'enchaînement des blocs
 ctrlGenerator.scrub_ = function(block, code, opt_thisOnly) {
     const nextBlock = block.getNextBlock();
     const nextCode = opt_thisOnly ? '' : ctrlGenerator.blockToCode(nextBlock);
     return code + nextCode;
 };
 
-// Logique Variable
-ctrlGenerator.forBlock['wincc_variable'] = function(block) {
-    const type = block.getFieldValue('TYPE');
-    const name = block.getFieldValue('VAR_NAME');
-    let value = block.getFieldValue('VALUE');
-    if (type === 'string' && !value.includes('"')) value = `"${value}"`;
-    return `${type} ${name} = ${value};\n`;
+// Traductions
+ctrlGenerator.forBlock['wincc_variable'] = block => {
+    let val = block.getFieldValue('VALUE');
+    if (block.getFieldValue('TYPE') === 'string' && !val.includes('"')) val = `"${val}"`;
+    return `${block.getFieldValue('TYPE')} ${block.getFieldValue('VAR_NAME')} = ${val};\n`;
 };
 
-// Logique dpGet
-ctrlGenerator.forBlock['wincc_dpget'] = function(block) {
-    return `dpGet("${block.getFieldValue('DP_NAME')}", ${block.getFieldValue('VAR_NAME')});\n`;
-};
+ctrlGenerator.forBlock['wincc_dpget'] = block => 
+    `dpGet("${block.getFieldValue('DP_NAME')}", ${block.getFieldValue('VAR_NAME')});\n`;
 
-// Logique dpSet
-ctrlGenerator.forBlock['wincc_dpset'] = function(block) {
-    return `dpSet("${block.getFieldValue('DP_NAME')}", ${block.getFieldValue('VALUE')});\n`;
-};
+ctrlGenerator.forBlock['wincc_dpset'] = block => 
+    `dpSet("${block.getFieldValue('DP_NAME')}", ${block.getFieldValue('VALUE')});\n`;
 
-// Logique If
-ctrlGenerator.forBlock['logic_if_custom'] = function(block) {
+ctrlGenerator.forBlock['wincc_delay'] = block => 
+    `delay(${block.getFieldValue('SEC')});\n`;
+
+ctrlGenerator.forBlock['wincc_debug'] = block => 
+    `DebugN("${block.getFieldValue('TEXT')}");\n`;
+
+ctrlGenerator.forBlock['logic_if_custom'] = block => {
     const branch = ctrlGenerator.statementToCode(block, 'DO');
-    return `if (${block.getFieldValue('VAR')} == ${block.getFieldValue('VAL_COMP')}) {\n${branch}}\n`;
+    return `if (${block.getFieldValue('VAR')} ${block.getFieldValue('OP')} ${block.getFieldValue('VAL_COMP')}) {\n${branch}}\n`;
 };
 
 /**
- * INITIALISATION DE L'INTERFACE
+ * INITIALISATION
  */
-
 const workspace = Blockly.inject('blocklyDiv', {
     toolbox: document.getElementById('toolbox'),
-    grid: { spacing: 20, length: 3, colour: '#ccc', snap: true },
-    zoom: { controls: true, wheel: true }
+    grid: { spacing: 20, length: 3, colour: '#ccc', snap: true }
 });
 
-// Mise à jour en temps réel
+// MISE À JOUR : On encapsule le code dans int main()
 workspace.addChangeListener(() => {
-    const code = ctrlGenerator.workspaceToCode(workspace);
-    document.getElementById('codeArea').value = code;
+    const rawCode = ctrlGenerator.workspaceToCode(workspace);
+    const formattedCode = `int main()\n{\n${rawCode.split('\n').map(line => line ? '  ' + line : '').join('\n')}\n  return 0;\n}`;
+    document.getElementById('codeArea').value = formattedCode;
 });
 
-// Fonction de téléchargement
 function downloadCode() {
     const code = document.getElementById('codeArea').value;
-    const finalFile = `main()\n{\n${code}\n}`;
-    const blob = new Blob([finalFile], {type: "text/plain"});
+    const blob = new Blob([code], {type: "text/plain"});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = "script_wincc.ctl";
