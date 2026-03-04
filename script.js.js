@@ -1,0 +1,87 @@
+// 1. Définition des Blocs (WinCC OA + Logique)
+Blockly.defineBlocksWithJsonArray([
+  {
+    "type": "wincc_dpget",
+    "message0": "Lire le DP : %1 stocker dans : %2",
+    "args0": [
+      { "type": "field_input", "name": "DP_NAME", "text": "System1:Motor.status" },
+      { "type": "field_input", "name": "VAR_NAME", "text": "valeur" }
+    ],
+    "previousStatement": null, "nextStatement": null, "colour": 230
+  },
+  {
+    "type": "wincc_dpset",
+    "message0": "Écrire dans le DP : %1 la valeur : %2",
+    "args0": [
+      { "type": "field_input", "name": "DP_NAME", "text": "System1:Cmd.start" },
+      { "type": "field_input", "name": "VALUE", "text": "1" }
+    ],
+    "previousStatement": null, "nextStatement": null, "colour": 0
+  },
+  {
+    "type": "logic_if_custom",
+    "message0": "Si %1 est égal à %2 alors :",
+    "args0": [
+      { "type": "field_input", "name": "VAR", "text": "valeur" },
+      { "type": "field_input", "name": "VAL_COMP", "text": "1" }
+    ],
+    "message1": "%1",
+    "args1": [{ "type": "input_statement", "name": "DO" }],
+    "previousStatement": null, "nextStatement": null, "colour": 210
+  }
+]);
+
+// 2. Configuration du Générateur CTRL
+const ctrlGenerator = new Blockly.Generator('CTRL');
+
+ctrlGenerator.scrub_ = function(block, code, opt_thisOnly) {
+    const nextBlock = block.getNextBlock();
+    const nextCode = opt_thisOnly ? '' : ctrlGenerator.blockToCode(nextBlock);
+    return code + nextCode;
+};
+
+// Traduction : dpGet
+ctrlGenerator.forBlock['wincc_dpget'] = function(block) {
+  return `anytype ${block.getFieldValue('VAR_NAME')};\ndpGet("${block.getFieldValue('DP_NAME')}", ${block.getFieldValue('VAR_NAME')});\n`;
+};
+
+// Traduction : dpSet
+ctrlGenerator.forBlock['wincc_dpset'] = function(block) {
+  return `dpSet("${block.getFieldValue('DP_NAME')}", ${block.getFieldValue('VALUE')});\n`;
+};
+
+// Traduction : IF
+ctrlGenerator.forBlock['logic_if_custom'] = function(block) {
+  const variable = block.getFieldValue('VAR');
+  const value = block.getFieldValue('VAL_COMP');
+  const branch = ctrlGenerator.statementToCode(block, 'DO');
+  return `if (${variable} == ${value}) {\n${branch}}\n`;
+};
+
+// 3. Initialisation de l'interface
+const workspace = Blockly.inject('blocklyDiv', {
+    toolbox: `
+    <xml>
+        <category name="WinCC OA" colour="#5b67a5">
+            <block type="wincc_dpget"></block>
+            <block type="wincc_dpset"></block>
+        </category>
+        <category name="Logique" colour="#5bA55B">
+            <block type="logic_if_custom"></block>
+        </category>
+    </xml>`,
+    scrollbars: true
+});
+
+workspace.addChangeListener(() => {
+    document.getElementById('codeArea').value = ctrlGenerator.workspaceToCode(workspace);
+});
+
+function downloadCode() {
+    const code = document.getElementById('codeArea').value;
+    const blob = new Blob([`main() {\n${code}\n}`], {type: "text/plain"});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = "logic_nocode.ctl";
+    a.click();
+}
