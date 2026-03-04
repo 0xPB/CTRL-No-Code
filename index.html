@@ -1,36 +1,31 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WinCC OA No-Code Platform</title>
+    <title>WinCC OA No-Code Pro</title>
     <script src="https://unpkg.com/blockly/blockly.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        header { background: #00274c; color: white; padding: 1rem 2rem; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        .main-content { display: flex; flex: 1; overflow: hidden; }
-        #blocklyDiv { flex: 2; border-right: 2px solid #ddd; }
-        .output-panel { flex: 1; display: flex; flex-direction: column; background: #1e1e1e; color: #d4d4d4; }
-        .output-panel h3 { padding: 10px; margin: 0; background: #333; font-size: 14px; color: #aaa; }
-        #codeArea { flex: 1; width: 100%; border: none; background: transparent; color: #9cdcfe; padding: 15px; font-family: 'Consolas', monospace; resize: none; outline: none; }
-        .actions { padding: 10px; background: #333; display: flex; justify-content: flex-end; }
-        button { background: #0078d4; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #005a9e; }
+        body { font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        .header { background: #00274c; color: white; padding: 10px 20px; }
+        .main { display: flex; flex: 1; }
+        #blocklyDiv { flex: 2; border-right: 2px solid #ccc; }
+        .side { flex: 1; background: #1e1e1e; display: flex; flex-direction: column; }
+        #codeArea { flex: 1; background: #1e1e1e; color: #9cdcfe; padding: 15px; font-family: monospace; border: none; resize: none; }
+        .btns { padding: 10px; background: #333; }
+        button { cursor: pointer; padding: 8px; background: #0078d4; color: white; border: none; border-radius: 4px; }
     </style>
 </head>
 <body>
 
-<header>
-    <h1>WinCC OA - CTRL Generator v1.1</h1>
-</header>
+<div class="header">
+    <strong>WinCC OA - CTRL Builder</strong>
+</div>
 
-<div class="main-content">
+<div class="main">
     <div id="blocklyDiv"></div>
-
-    <div class="output-panel">
-        <h3>SCRIPT GENERATED (.CTL)</h3>
-        <textarea id="codeArea" readonly placeholder="Glissez des blocs pour générer du code..."></textarea>
-        <div class="actions">
+    <div class="side">
+        <textarea id="codeArea" readonly></textarea>
+        <div class="btns">
             <button onclick="downloadCode()">Télécharger .ctl</button>
         </div>
     </div>
@@ -40,17 +35,117 @@
     <category name="Variables" colour="160">
         <block type="wincc_variable"></block>
     </category>
-    <category name="WinCC OA" colour="#5b67a5">
+    <category name="WinCC OA" colour="230">
         <block type="wincc_dpget"></block>
         <block type="wincc_dpset"></block>
         <block type="wincc_delay"></block>
         <block type="wincc_debug"></block>
     </category>
-    <category name="Logique" colour="#5bA55B">
+    <category name="Logique" colour="210">
         <block type="logic_if_custom"></block>
     </category>
 </xml>
 
-<script src="logic.js"></script>
+<script>
+    // 1. DÉFINITION DES BLOCS
+    Blockly.defineBlocksWithJsonArray([
+        {
+            "type": "wincc_variable",
+            "message0": "Déclarer %1 %2 = %3",
+            "args0": [
+                { "type": "field_dropdown", "name": "TYPE", "options": [["bool", "bool"], ["int", "int"], ["float", "float"], ["string", "string"]] },
+                { "type": "field_input", "name": "VAR_NAME", "text": "maVar" },
+                { "type": "field_input", "name": "VALUE", "text": "0" }
+            ],
+            "previousStatement": null, "nextStatement": null, "colour": 160
+        },
+        {
+            "type": "wincc_dpget",
+            "message0": "Lire DP %1 → %2",
+            "args0": [
+                { "type": "field_input", "name": "DP_NAME", "text": "System1:Motor.status" },
+                { "type": "field_input", "name": "VAR_NAME", "text": "maVar" }
+            ],
+            "previousStatement": null, "nextStatement": null, "colour": 230
+        },
+        {
+            "type": "wincc_dpset",
+            "message0": "Écrire %1 → DP %2",
+            "args0": [
+                { "type": "field_input", "name": "VALUE", "text": "1" },
+                { "type": "field_input", "name": "DP_NAME", "text": "System1:Cmd.start" }
+            ],
+            "previousStatement": null, "nextStatement": null, "colour": 0
+        },
+        {
+            "type": "wincc_delay",
+            "message0": "Attendre %1 sec",
+            "args0": [{ "type": "field_number", "name": "SEC", "value": 1 }],
+            "previousStatement": null, "nextStatement": null, "colour": 260
+        },
+        {
+            "type": "wincc_debug",
+            "message0": "DebugN %1",
+            "args0": [{ "type": "field_input", "name": "TEXT", "text": "Log" }],
+            "previousStatement": null, "nextStatement": null, "colour": 120
+        },
+        {
+            "type": "logic_if_custom",
+            "message0": "Si %1 %2 %3 alors",
+            "args0": [
+                { "type": "field_input", "name": "VAR", "text": "maVar" },
+                { "type": "field_dropdown", "name": "OP", "options": [["==", "=="], [">", ">"], ["<", "<"]] },
+                { "type": "field_input", "name": "VAL_COMP", "text": "1" }
+            ],
+            "message1": "%1",
+            "args1": [{ "type": "input_statement", "name": "DO" }],
+            "previousStatement": null, "nextStatement": null, "colour": 210
+        }
+    ]);
+
+    // 2. LE GÉNÉRATEUR
+    const ctrlGenerator = new Blockly.Generator('CTRL');
+    
+    ctrlGenerator.scrub_ = function(block, code, opt_thisOnly) {
+        const nextBlock = block.getNextBlock();
+        const nextCode = opt_thisOnly ? '' : ctrlGenerator.blockToCode(nextBlock);
+        return code + nextCode;
+    };
+
+    ctrlGenerator.forBlock['wincc_variable'] = b => `${b.getFieldValue('TYPE')} ${b.getFieldValue('VAR_NAME')} = ${b.getFieldValue('VALUE')};\n`;
+    ctrlGenerator.forBlock['wincc_dpget'] = b => `dpGet("${b.getFieldValue('DP_NAME')}", ${b.getFieldValue('VAR_NAME')});\n`;
+    ctrlGenerator.forBlock['wincc_dpset'] = b => `dpSet("${b.getFieldValue('DP_NAME')}", ${b.getFieldValue('VALUE')});\n`;
+    ctrlGenerator.forBlock['wincc_delay'] = b => `delay(${b.getFieldValue('SEC')});\n`;
+    ctrlGenerator.forBlock['wincc_debug'] = b => `DebugN("${b.getFieldValue('TEXT')}");\n`;
+    ctrlGenerator.forBlock['logic_if_custom'] = b => {
+        const branch = ctrlGenerator.statementToCode(b, 'DO');
+        return `if (${b.getFieldValue('VAR')} ${b.getFieldValue('OP')} ${b.getFieldValue('VAL_COMP')}) {\n${branch}}\n`;
+    };
+
+    // 3. INITIALISATION
+    const workspace = Blockly.inject('blocklyDiv', {
+        toolbox: document.getElementById('toolbox')
+    });
+
+    // MISE À JOUR DU CODE AVEC INT MAIN
+    function generateCode() {
+        const bodyCode = ctrlGenerator.workspaceToCode(workspace);
+        // On indente le code pour qu'il soit joli à l'intérieur du main
+        const indented = bodyCode.split('\n').map(line => line ? '    ' + line : '').join('\n');
+        const finalCode = `int main()\n{\n${indented}\n    return 0;\n}`;
+        document.getElementById('codeArea').value = finalCode;
+    }
+
+    workspace.addChangeListener(generateCode);
+
+    function downloadCode() {
+        const code = document.getElementById('codeArea').value;
+        const blob = new Blob([code], {type: "text/plain"});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = "script.ctl";
+        a.click();
+    }
+</script>
 </body>
 </html>
